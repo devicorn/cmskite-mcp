@@ -1,0 +1,74 @@
+# cmskite-mcp
+
+An MCP server for CMSKite. It gives an assistant the workspace, project and
+content surface behind one agent token.
+
+## Setup
+
+Create a token in the dashboard under **Settings → Agent tokens**. Tick only
+what the assistant needs; the defaults are read and write content. The token is
+shown once.
+
+```jsonc
+{
+  "mcpServers": {
+    "cmskite": {
+      "command": "npx",
+      "args": ["-y", "cmskite-mcp"],
+      "env": {
+        "CMSKITE_API_URL": "https://api.cmskite.com",
+        "CMSKITE_AGENT_TOKEN": "cka_live_…"
+      }
+    }
+  }
+}
+```
+
+| Variable | |
+|---|---|
+| `CMSKITE_AGENT_TOKEN` | Required. Starts `cka_`. A `csk_` value is a project API key: read-only, one project, and rejected here. |
+| `CMSKITE_API_URL` | Defaults to `https://api.cmskite.com`. |
+| `CMSKITE_PROJECT_ID` | Optional. The project content tools default to, so `projectId` can be left off. |
+
+## Tools
+
+**Where am I** — `whoami`, `list_projects`, `get_project`, `get_project_summary`
+
+**Shape** — `create_workspace`, `create_project`, `list_categories`,
+`create_category`, `update_category`, `delete_category`, `list_tags`,
+`create_tag`, `list_authors`, `create_author`
+
+**Content** — `list_posts`, `get_post`, `search_posts`, `create_post`,
+`update_post`, `delete_post`
+
+Start with `whoami`, then `list_projects` for a `prj_…` id. Every content tool
+needs one unless `CMSKITE_PROJECT_ID` is set.
+
+New posts are drafts. Publishing is `update_post` with `status: "published"` —
+a separate step, because publishing is a decision the person should make.
+
+## What it cannot do
+
+This server adds no permissions. Every limit is enforced by the API on every
+request: the token's grant list, the member's current role, the one workspace
+the token is bound to, and the plan.
+
+No token can mint or revoke credentials, delete a project, or delete a
+workspace — not at any role and not with any configuration. See
+`docs/agents-and-mcp.md` in the API repository.
+
+`create_workspace` returns a **new** token for the workspace it created. The
+calling token cannot reach it. Show that value to the person: it is returned
+once.
+
+## Development
+
+```bash
+pnpm install
+pnpm typecheck && pnpm lint && pnpm test
+pnpm build
+CMSKITE_API_URL=http://localhost:8787 CMSKITE_AGENT_TOKEN=cka_live_… pnpm dev
+```
+
+stdout is the protocol channel. Every diagnostic goes to stderr — anything else
+on stdout corrupts the stream and the client drops the connection.
