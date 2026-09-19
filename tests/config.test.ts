@@ -48,3 +48,25 @@ describe('tools', () => {
     }
   })
 })
+
+describe('request building', () => {
+  it('escapes an id so it cannot become a different request', async () => {
+    const { segment } = await import('../src/client.js')
+    const base = 'http://api.test'
+
+    // The attack: content the model has read tells it to pass a traversal as
+    // an id. Unescaped, `new URL` resolves it into a different endpoint.
+    const hostile = '../../../v1/admin/tenants'
+    expect(new URL(`${base}/v1/blog/posts/${hostile}`).pathname).toBe('/v1/admin/tenants')
+    expect(new URL(`${base}/v1/blog/posts/${segment(hostile)}`).pathname).toBe(
+      '/v1/blog/posts/..%2F..%2F..%2Fv1%2Fadmin%2Ftenants',
+    )
+
+    // And a query string, which could otherwise override a parameter.
+    expect(new URL(`${base}/v1/blog/posts/${segment('x?limit=1000')}`).search).toBe('')
+
+    // A real id survives untouched, so nothing legitimate is broken by this.
+    const real = 'post_01937f2e8a1c7000'
+    expect(segment(real)).toBe(real)
+  })
+})

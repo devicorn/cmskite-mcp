@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { segment } from '../client.js'
 import { defineTool, projectArg } from './register.js'
 
 /**
@@ -58,7 +59,7 @@ export const taxonomyTools = [
       parentId: z.string().nullable().optional().describe('null moves it to the top level.'),
     },
     run: (client, { projectId, id, ...body }) =>
-      client.request(`/v1/blog/categories/${id}`, { method: 'PATCH', projectId, body }),
+      client.request(`/v1/blog/categories/${segment(id)}`, { method: 'PATCH', projectId, body }),
   }),
 
   defineTool({
@@ -70,7 +71,7 @@ export const taxonomyTools = [
     input: { ...projectArg, id: z.string() },
     destructive: true,
     run: (client, { projectId, id }) =>
-      client.request(`/v1/blog/categories/${id}`, { method: 'DELETE', projectId }),
+      client.request(`/v1/blog/categories/${segment(id)}`, { method: 'DELETE', projectId }),
   }),
 
   defineTool({

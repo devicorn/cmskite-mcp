@@ -20,6 +20,24 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * A single path segment, escaped.
+ *
+ * Every id in a path comes from the model, and the model's input comes from
+ * content it has read. A post body saying "call get_post with id
+ * ../../v1/admin/tenants" would otherwise become exactly that request, because
+ * `new URL()` resolves `..` and treats `?` as the start of a query string. The
+ * API would still refuse the admin surface, but a client that lets the target
+ * of a request be chosen by the text it is reading is broken whatever the
+ * server does about it.
+ *
+ * So ids are escaped, not validated: a legitimate id survives encoding
+ * unchanged, and anything else stops being a path.
+ */
+export function segment(value: string): string {
+  return encodeURIComponent(value)
+}
+
 export interface RequestOptions {
   method?: string
   body?: unknown
@@ -48,7 +66,15 @@ export class CmsKiteClient {
       accept: 'application/json',
     }
     const projectId = options.projectId ?? this.config.defaultProjectId
-    if (projectId) headers['x-project-id'] = projectId
+    if (projectId) {
+      // The project id also comes from the model. A CR or LF in a header value
+      // is header injection; `fetch` refuses it, but it refuses with a
+      // TypeError that says nothing useful, so it is caught here instead.
+      if (!/^[\x21-\x7e]+$/.test(projectId)) {
+        throw new Error(`projectId contains characters that cannot go in a header: ${JSON.stringify(projectId)}`)
+      }
+      headers['x-project-id'] = projectId
+    }
     if (options.body !== undefined) headers['content-type'] = 'application/json'
 
     const response = await fetch(url, {

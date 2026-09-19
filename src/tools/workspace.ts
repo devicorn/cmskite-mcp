@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { segment } from '../client.js'
 import { defineTool } from './register.js'
 
 /**
@@ -52,7 +53,7 @@ export const workspaceTools = [
     description: 'One project: what it is, which site it serves, and its settings.',
     input: { projectId: z.string().describe('The project id, as `prj_...`.') },
     readOnly: true,
-    run: (client, args) => client.request(`/v1/projects/${args.projectId}`),
+    run: (client, args) => client.request(`/v1/projects/${segment(args.projectId)}`),
   }),
 
   defineTool({
@@ -79,6 +80,6 @@ export const workspaceTools = [
       'Use this rather than listing everything to answer "what is in here".',
     input: { projectId: z.string().describe('The project id, as `prj_...`.') },
     readOnly: true,
-    run: (client, args) => client.request(`/v1/projects/${args.projectId}/summary`),
+    run: (client, args) => client.request(`/v1/projects/${segment(args.projectId)}/summary`),
   }),
 ] as const

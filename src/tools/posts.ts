@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { segment } from '../client.js'
 import { defineTool, projectArg } from './register.js'
 
 const STATUS = z.enum(['draft', 'scheduled', 'published', 'archived'])
@@ -55,7 +56,9 @@ export const postTools = [
     readOnly: true,
     run: (client, { projectId, id, slug }) => {
       if (!id && !slug) throw new Error('Give either id or slug.')
-      const path = id ? `/v1/blog/posts/${id}` : `/v1/blog/posts/slug/${slug}`
+      const path = id
+        ? `/v1/blog/posts/${segment(id)}`
+        : `/v1/blog/posts/slug/${segment(slug!)}`
       return client.request(path, { projectId })
     },
   }),
@@ -125,7 +128,7 @@ export const postTools = [
       seo: seo.optional(),
     },
     run: (client, { projectId, id, ...body }) =>
-      client.request(`/v1/blog/posts/${id}`, { method: 'PATCH', projectId, body }),
+      client.request(`/v1/blog/posts/${segment(id)}`, { method: 'PATCH', projectId, body }),
   }),
 
   defineTool({
@@ -137,6 +140,6 @@ export const postTools = [
     input: { ...projectArg, id: z.string().describe('The post id, as `post_...`.') },
     destructive: true,
     run: (client, { projectId, id }) =>
-      client.request(`/v1/blog/posts/${id}`, { method: 'DELETE', projectId }),
+      client.request(`/v1/blog/posts/${segment(id)}`, { method: 'DELETE', projectId }),
   }),
 ] as const
