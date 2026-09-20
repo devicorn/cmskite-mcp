@@ -44,6 +44,18 @@ shown once.
 Start with `whoami`, then `list_projects` for a `prj_…` id. Every content tool
 needs one unless `CMSKITE_PROJECT_ID` is set.
 
+Each tool needs the matching grant, and a token has only what was ticked:
+
+| Tool | Grant |
+|---|---|
+| `whoami` | `member.read` — tick it, or the first call an assistant makes is the one that fails |
+| `list_projects`, `get_project`, `get_project_summary` | `project.read` |
+| `create_project` | `project.write` |
+| `create_workspace` | `workspace.create` |
+| `list_*`, `get_post`, `search_posts` | `content.read` |
+| `create_*`, `update_*` | `content.write` |
+| `delete_*` | `content.delete` |
+
 New posts are drafts. Publishing is `update_post` with `status: "published"` —
 a separate step, because publishing is a decision the person should make.
 

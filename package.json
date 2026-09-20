@@ -2,6 +2,29 @@
   "name": "cmskite-mcp",
   "version": "0.1.0",
   "description": "MCP server for CMSKite. Gives an assistant the workspace, project and content surface behind one agent token.",
+  "license": "MIT",
+  "author": "CMSKite",
+  "homepage": "https://cmskite.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/devicorn/cmskite-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/devicorn/cmskite-mcp/issues"
+  },
+  "keywords": [
+    "mcp",
+    "modelcontextprotocol",
+    "claude",
+    "cursor",
+    "cms",
+    "headless-cms",
+    "blog",
+    "content",
+    "cmskite",
+    "ai",
+    "agent"
+  ],
   "type": "module",
   "bin": {
     "cmskite-mcp": "dist/index.js"
@@ -19,7 +42,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint .",
     "test": "vitest run",
-    "verify": "pnpm typecheck && pnpm lint && pnpm test && pnpm build"
+    "verify": "pnpm typecheck && pnpm lint && pnpm test && pnpm build",
+    "prepublishOnly": "pnpm verify"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.20.0",
@@ -33,5 +57,8 @@
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.46.4",
     "vitest": "^5.0.1"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
