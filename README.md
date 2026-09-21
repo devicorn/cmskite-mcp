@@ -137,6 +137,8 @@ Each tool needs the matching grant, and a token has only what was ticked:
 | `create_*`, `update_*` | `content.write` |
 | `update_post` with `status: "published"` | `content.publish`, on top of `content.write` |
 | `delete_*` | `content.delete` |
+| `list_api_keys` | `apikey.read` |
+| `create_api_key` | `apikey.write` |
 
 New posts are drafts. Publishing is `update_post` with `status: "published"` —
 a separate step, because publishing is a decision the person should make, and a
@@ -154,9 +156,15 @@ This server adds no permissions. Every limit is enforced by the API on every
 request: the token's grant list, the member's current role, the one workspace
 the token is bound to, and the plan.
 
-No token can mint or revoke credentials, invite or remove a member, change
-anybody's permissions, delete a project, or delete a workspace — not at any role
-and not with any configuration.
+No token can revoke credentials, invite or remove a member, change anybody's
+permissions, delete a project, or delete a workspace — not at any role and not
+with any configuration.
+
+`create_api_key` is the one credential an agent can mint, and only with the
+grant ticked. What it produces is strictly weaker than the token that made it:
+one project, read-only, published content only, no ability to revoke anything.
+It exists so that finishing a site does not require shipping the agent token —
+which can write and delete — to production.
 
 A token also cannot reach a project its owner was not admitted to. Project
 access belongs to the person, and the token acts as them. See

@@ -1,3 +1,4 @@
+import { keyTools } from './keys.js'
 import { postTools } from './posts.js'
 import { taxonomyTools } from './taxonomy.js'
 import { workspaceTools } from './workspace.js'
@@ -16,6 +17,7 @@ export const allTools = [
   ...workspaceTools,
   ...taxonomyTools,
   ...postTools,
+  ...keyTools,
 ] as readonly AnyTool[]
 
 export { registerTools } from './register.js'
