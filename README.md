@@ -7,12 +7,93 @@ content surface behind one agent token.
 
 Create a token in the dashboard under **Settings → Agent tokens**. Tick only
 what the assistant needs; the defaults are read and write content. The token is
-shown once.
+shown once, and that dialogue generates the block below for whichever client you
+pick — **Set up a client** on the same screen shows it again afterwards.
+
+Every client runs the same process. They disagree only about where it is written
+and under what key, and a block copied from the wrong one pastes without
+complaint and then does nothing.
+
+### Claude Code
+
+```sh
+claude mcp add cmskite --scope user \
+  --env CMSKITE_API_URL=https://api.cmskite.com \
+  --env CMSKITE_AGENT_TOKEN=cka_live_… \
+  -- npx -y cmskite-mcp
+```
+
+`--scope user` puts it in every project. Drop it to add it to one repository.
+
+### Claude Desktop, Cursor, Windsurf, and most others
+
+`~/Library/Application Support/Claude/claude_desktop_config.json` ·
+`%APPDATA%\Claude\claude_desktop_config.json` · `~/.cursor/mcp.json` ·
+`~/.codeium/windsurf/mcp_config.json`
 
 ```jsonc
 {
   "mcpServers": {
     "cmskite": {
+      "command": "npx",
+      "args": ["-y", "cmskite-mcp"],
+      "env": {
+        "CMSKITE_API_URL": "https://api.cmskite.com",
+        "CMSKITE_AGENT_TOKEN": "cka_live_…"
+      }
+    }
+  }
+}
+```
+
+Claude Desktop reads that file only at start-up, so quit it completely and open
+it again.
+
+### Codex CLI
+
+`~/.codex/config.toml` — TOML, and the only one here that does not take the
+block above.
+
+```toml
+[mcp_servers.cmskite]
+command = "npx"
+args = ["-y", "cmskite-mcp"]
+
+[mcp_servers.cmskite.env]
+CMSKITE_API_URL = "https://api.cmskite.com"
+CMSKITE_AGENT_TOKEN = "cka_live_…"
+```
+
+### VS Code
+
+`.vscode/mcp.json` — the key is `servers`, not `mcpServers`, and the transport
+is named.
+
+```jsonc
+{
+  "servers": {
+    "cmskite": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "cmskite-mcp"],
+      "env": {
+        "CMSKITE_API_URL": "https://api.cmskite.com",
+        "CMSKITE_AGENT_TOKEN": "cka_live_…"
+      }
+    }
+  }
+}
+```
+
+### Zed
+
+Settings (`cmd-shift-p` → “open settings”) — context servers, marked custom.
+
+```jsonc
+{
+  "context_servers": {
+    "cmskite": {
+      "source": "custom",
       "command": "npx",
       "args": ["-y", "cmskite-mcp"],
       "env": {
@@ -54,10 +135,18 @@ Each tool needs the matching grant, and a token has only what was ticked:
 | `create_workspace` | `workspace.create` |
 | `list_*`, `get_post`, `search_posts` | `content.read` |
 | `create_*`, `update_*` | `content.write` |
+| `update_post` with `status: "published"` | `content.publish`, on top of `content.write` |
 | `delete_*` | `content.delete` |
 
 New posts are drafts. Publishing is `update_post` with `status: "published"` —
-a separate step, because publishing is a decision the person should make.
+a separate step, because publishing is a decision the person should make, and a
+separate grant, so an assistant can be allowed to draft without being allowed to
+ship.
+
+The member's own permissions are checked as well, fresh on every request. A
+token ticked for `content.publish` held by somebody whose role does not include
+it publishes nothing: the grant list is a ceiling on what its owner can already
+do, never an addition to it.
 
 ## What it cannot do
 
@@ -65,8 +154,12 @@ This server adds no permissions. Every limit is enforced by the API on every
 request: the token's grant list, the member's current role, the one workspace
 the token is bound to, and the plan.
 
-No token can mint or revoke credentials, delete a project, or delete a
-workspace — not at any role and not with any configuration. See
+No token can mint or revoke credentials, invite or remove a member, change
+anybody's permissions, delete a project, or delete a workspace — not at any role
+and not with any configuration.
+
+A token also cannot reach a project its owner was not admitted to. Project
+access belongs to the person, and the token acts as them. See
 `docs/agents-and-mcp.md` in the API repository.
 
 `create_workspace` returns a **new** token for the workspace it created. The

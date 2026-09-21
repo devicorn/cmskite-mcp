@@ -85,7 +85,8 @@ export const postTools = [
     title: 'Create a post',
     description:
       'Writes a new post. It is a draft unless you say otherwise, which is usually what you ' +
-      'want: publishing is a decision the person should make. Requires the content.write grant.',
+      'want: publishing is a decision the person should make. Requires the content.write grant, ' +
+      'and content.publish as well if you send status "published".',
     input: {
       ...projectArg,
       title: z.string().min(1).max(300),
@@ -110,7 +111,8 @@ export const postTools = [
     title: 'Update a post',
     description:
       'Changes only the fields you send; anything omitted is left alone. This is how a post is ' +
-      'published: send status "published". Requires the content.write grant.',
+      'published: send status "published", which needs the content.publish grant on top of ' +
+      'content.write.',
     input: {
       ...projectArg,
       id: z.string().describe('The post id, as `post_...`.'),
