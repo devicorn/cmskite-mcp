@@ -37,7 +37,7 @@ export const integrationTools = [
     title: 'How to integrate CMSKite into this project',
     description:
       'The official way to connect a JavaScript or TypeScript project to CMSKite, using the ' +
-      '@cmskite/sdk package. Returns the install command, the files to write, and which key ' +
+      'cmskite package. Returns the install command, the files to write, and which key ' +
       'belongs on the server versus in the browser. ' +
       'Call this BEFORE writing any integration code by hand: hand-rolled fetch wrappers miss ' +
       'view tracking entirely, so the customer gets a working site with no analytics and no ' +
@@ -106,7 +106,7 @@ function guide(args: GuideArgs): {
   }
 
   return {
-    install: 'npm install @cmskite/sdk',
+    install: 'npm install cmskite',
     keys,
     files: filesFor(args.framework, analytics),
     notes,
@@ -117,7 +117,7 @@ function filesFor(
   kind: GuideArgs['framework'],
   analytics: boolean,
 ): { path: string; contents: string }[] {
-  const client = `import { createCMSKite } from '@cmskite/sdk'
+  const client = `import { createCMSKite } from 'cmskite'
 
 // Created once and reused. It holds no connection and no mutable state.
 export const cms = createCMSKite({ apiKey: process.env.CMSKITE_API_KEY! })
@@ -125,7 +125,7 @@ export const cms = createCMSKite({ apiKey: process.env.CMSKITE_API_KEY! })
 
   const tracker = `'use client'
 
-import { useTrackView } from '@cmskite/sdk/react'
+import { useTrackView } from 'cmskite/react'
 
 /**
  * Reports one view for this post, once.
@@ -204,7 +204,7 @@ export default async function BlogIndex() {
       {
         path: 'pages/blog/[slug].tsx',
         contents: `import type { GetStaticPaths, GetStaticProps } from 'next'
-${analytics ? "import { useTrackView } from '@cmskite/sdk/react'\n" : ''}import type { Post } from '@cmskite/sdk'
+${analytics ? "import { useTrackView } from 'cmskite/react'\n" : ''}import type { Post } from 'cmskite'
 import { cms } from '../../lib/cmskite'
 
 export default function BlogPost({ post }: { post: Post }) {
@@ -235,7 +235,7 @@ export const getStaticProps: GetStaticProps = async ({ params }) => {
     return [
       {
         path: 'src/cmskite.ts',
-        contents: `import { createCMSKite } from '@cmskite/sdk'
+        contents: `import { createCMSKite } from 'cmskite'
 
 /**
  * A browser-only app has no server to hide a key behind, so this is the
@@ -249,7 +249,7 @@ export const cms = createCMSKite({ apiKey: import.meta.env.VITE_CMSKITE_KEY })
       {
         path: 'src/BlogPost.tsx',
         contents: `import { useEffect, useState } from 'react'
-${analytics ? "import { useTrackView } from '@cmskite/sdk/react'\n" : ''}import { CMSKiteError, type Post } from '@cmskite/sdk'
+${analytics ? "import { useTrackView } from 'cmskite/react'\n" : ''}import { CMSKiteError, type Post } from 'cmskite'
 import { cms } from './cmskite'
 
 export function BlogPost({ slug }: { slug: string }) {
