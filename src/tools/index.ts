@@ -1,3 +1,4 @@
+import { diagnosticTools } from './diagnose.js'
 import { integrationTools } from './integrate.js'
 import { keyTools } from './keys.js'
 import { postTools } from './posts.js'
@@ -15,6 +16,10 @@ import type { AnyTool } from './register.js'
  * works and counts no readers -- a customer gets a working site with no
  * analytics and nothing indicating that anything is missing.
  *
+ * Diagnostics come after integration for the same reason integration comes
+ * last: `check_integration` is what an assistant calls once it thinks it has
+ * finished, and what it calls first when somebody says the numbers are zero.
+ *
  * Media is deliberately absent. Uploading goes to object storage through a
  * presigned URL, so it is two calls and a byte stream, and an assistant that
  * cannot see the file has nothing useful to send. When it is added it belongs
@@ -26,6 +31,7 @@ export const allTools = [
   ...postTools,
   ...keyTools,
   ...integrationTools,
+  ...diagnosticTools,
 ] as readonly AnyTool[]
 
 export { registerTools } from './register.js'

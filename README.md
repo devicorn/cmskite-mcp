@@ -122,8 +122,26 @@ Settings (`cmd-shift-p` → “open settings”) — context servers, marked cus
 **Content** — `list_posts`, `get_post`, `search_posts`, `create_post`,
 `update_post`, `delete_post`
 
+**Keys** — `list_api_keys`, `create_api_key`
+
+**Connecting a website** — `get_integration_guide`, `check_integration`,
+`get_content_analytics`
+
 Start with `whoami`, then `list_projects` for a `prj_…` id. Every content tool
 needs one unless `CMSKITE_PROJECT_ID` is set.
+
+### Connecting a website
+
+`get_integration_guide` returns the files to write for the project in front of
+you. It answers for JavaScript with the `cmskite` package, and for PHP,
+WordPress, Laravel, Python or a plain HTML site with the raw HTTP calls — those
+need no dependency at all.
+
+`check_integration` is the one to finish with, and the one to start with when
+somebody says their views are zero. An integration has two halves: the server
+fetches content, and the reader's browser reports the view. Building only the
+first produces a site that works perfectly and counts nobody, with no error
+anywhere to find. Nothing else can tell those two states apart.
 
 Each tool needs the matching grant, and a token has only what was ticked:
 
@@ -139,6 +157,9 @@ Each tool needs the matching grant, and a token has only what was ticked:
 | `delete_*` | `content.delete` |
 | `list_api_keys` | `apikey.read` |
 | `create_api_key` | `apikey.write` |
+| `check_integration` | `project.read` |
+| `get_content_analytics` | `analytics.read` |
+| `get_integration_guide` | none — it reads nothing and changes nothing |
 
 New posts are drafts. Publishing is `update_post` with `status: "published"` —
 a separate step, because publishing is a decision the person should make, and a
