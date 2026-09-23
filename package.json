@@ -1,6 +1,6 @@
 {
   "name": "cmskite-mcp",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "MCP server for CMSKite. Gives an assistant the workspace, project and content surface behind one agent token.",
   "license": "MIT",
   "author": "CMSKite",
