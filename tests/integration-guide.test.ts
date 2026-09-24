@@ -112,7 +112,10 @@ describe('the integration guide', () => {
   it('names the environment each server key actually belongs in', async () => {
     expect((await ask('wordpress')).keys[0]!.where).toMatch(/wp-config/i)
     expect((await ask('laravel')).keys[0]!.where).toMatch(/\.env/)
-    expect((await ask('nextjs-app')).keys[0]!.where).toMatch(/never prefixed/i)
+    // Next.js: one variable for both halves, so there is only one key to set.
+    const next = await ask('nextjs-app')
+    expect(next.keys.map((k) => k.name)).toEqual(['NEXT_PUBLIC_CMSKITE_KEY'])
+    expect(next.files.find((f) => f.path === 'lib/cmskite.ts')!.contents).toContain('NEXT_PUBLIC_CMSKITE_KEY')
   })
 
   it('ends by telling the caller to verify rather than to declare victory', async () => {

@@ -73,7 +73,9 @@ export const integrationTools = [
       includeAnalytics: z
         .boolean()
         .optional()
-        .describe('Include view and click tracking. Defaults to true; there is rarely a reason not to.'),
+        .describe(
+          'Include view and click tracking. Defaults to true; there is rarely a reason not to.',
+        ),
     },
     readOnly: true,
     run: (_client, args) => Promise.resolve(guide(args)),
@@ -108,9 +110,9 @@ function guide(args: GuideArgs): {
     'Fetch the content on the server, report the view from the browser. That split IS the ' +
       'integration, and it is the part that gets missed: a site that only fetches content ' +
       'works perfectly and counts nobody.',
-    'A website uses a PROJECT key, which starts `csk_live_`. It is read-only and returns ' +
-      'published content only, so it is safe in a page — use two anyway, so the one in the ' +
-      'page can be revoked without taking the site down. An AGENT token (`cka_live_`, the kind ' +
+    'A website uses ONE project key, which starts `csk_live_`. It is read-only and returns ' +
+      'published content only, so it is safe in a page, and the same key both fetches the ' +
+      'content and reports views. An AGENT token (`cka_live_`, the kind ' +
       'this MCP server runs on) is not a website key: it can write and delete, and must never ' +
       'be put in a browser bundle or reused as the site key, even though it can read content.',
     'A view is reported by the page that renders the post, never inferred from an API ' +
@@ -149,31 +151,52 @@ function guide(args: GuideArgs): {
 
   if (args.projectId) {
     notes.push(
-      `Create the keys for project ${args.projectId} with the create_api_key tool. That needs ` +
+      `Create the key for project ${args.projectId} with the create_api_key tool. That needs ` +
         'the apikey.write grant; if this token lacks it, the person creates the key in the ' +
         'dashboard under Project → API keys and puts it in the site themselves.',
     )
   }
 
-  const keys = browserOnly(args.framework)
+  const keys = args.framework.startsWith('nextjs')
     ? [
         {
-          name: 'the project key, pasted directly into the page',
-          where: 'In the HTML. There is no server to hide it behind, and nothing to hide.',
+          name: 'NEXT_PUBLIC_CMSKITE_KEY',
+          where:
+            'The host’s environment variables (.env.local for development). The only CMSKite variable the site needs.',
           why:
-            'Reads published content and reports views. Restrict its origins in project ' +
-            'settings — that is the control that matters here, not secrecy.',
+            'One project key for both halves: the server code fetches posts with it and the tracker ' +
+            'reports views with it. It is read-only, so being in the bundle is fine. Restrict its ' +
+            'origins in project settings.',
         },
       ]
-    : [
-        {
-          name: 'CMSKITE_API_KEY',
-          where: serverKeyHome(args.framework),
-          why: 'Fetches content while the page is being rendered or built.',
-        },
-      ]
+    : args.framework === 'react'
+      ? [
+          {
+            name: 'VITE_CMSKITE_KEY',
+            where:
+              'The build environment (.env for development). The only CMSKite variable the site needs.',
+            why: 'One project key: the app fetches posts and reports views with it. Restrict its origins in project settings.',
+          },
+        ]
+      : browserOnly(args.framework)
+        ? [
+            {
+              name: 'the project key, pasted directly into the page',
+              where: 'In the HTML. There is no server to hide it behind, and nothing to hide.',
+              why:
+                'Reads published content and reports views. Restrict its origins in project ' +
+                'settings — that is the control that matters here, not secrecy.',
+            },
+          ]
+        : [
+            {
+              name: 'CMSKITE_API_KEY',
+              where: serverKeyHome(args.framework),
+              why: 'Fetches content while the page is being rendered or built.',
+            },
+          ]
 
-  if (analytics && !browserOnly(args.framework)) {
+  if (analytics && RAW.has(args.framework) && !browserOnly(args.framework)) {
     keys.push({
       name: publicKeyName(args.framework),
       where: 'In the page the reader loads, deliberately.',
@@ -280,10 +303,12 @@ function filesFor(
   const rawFiles = rawFilesFor(kind, analytics)
   if (rawFiles) return rawFiles
 
+  // Next.js reads the one key the tracker also uses; a plain Node app has no browser half.
+  const keyVar = kind.startsWith('nextjs') ? 'NEXT_PUBLIC_CMSKITE_KEY' : 'CMSKITE_API_KEY'
   const client = `import { createCMSKite } from 'cmskite'
 
 // Created once and reused. It holds no connection and no mutable state.
-export const cms = createCMSKite({ apiKey: process.env.CMSKITE_API_KEY! })
+export const cms = createCMSKite({ apiKey: process.env.${keyVar}! })
 `
 
   const tracker = `'use client'
@@ -491,7 +516,9 @@ function rawFilesFor(
   kind: GuideArgs['framework'],
   analytics: boolean,
 ): { path: string; contents: string }[] | null {
-  const tracker = analytics ? [{ path: 'the-post-page (tracking snippet)', contents: RAW_TRACKER }] : []
+  const tracker = analytics
+    ? [{ path: 'the-post-page (tracking snippet)', contents: RAW_TRACKER }]
+    : []
 
   if (kind === 'html') {
     return [
