@@ -16,7 +16,9 @@ export const workspaceTools = [
     title: 'Who this token is',
     description:
       'The account this token acts as and the workspaces it can see. Call this first in a new ' +
-      'conversation: it confirms the token works and names the workspace everything else happens in.',
+      'conversation: it confirms the token works and names the workspace everything else happens in. ' +
+      '`agentGrants` is what THIS TOKEN may do; `permissions` is what its owner may do. A tool ' +
+      'works only when both allow it, so read `agentGrants` to know which tools will succeed.',
     input: {},
     readOnly: true,
     run: (client) => client.request('/v1/auth/me'),
@@ -70,6 +72,26 @@ export const workspaceTools = [
       websiteUrl: z.string().max(300).optional().describe('Display only. Not a CORS allowance.'),
     },
     run: (client, args) => client.request('/v1/projects', { method: 'POST', body: args }),
+  }),
+
+  defineTool({
+    name: 'update_project',
+    title: 'Update a project',
+    description:
+      'Change a project\'s name, description, website, or allowed origins. Only the fields ' +
+      'passed change. `allowedOrigins` REPLACES the list: pass every origin, like ' +
+      '["https://example.com", "https://www.example.com"] — scheme and host, no path. It decides ' +
+      'which websites may use the project key from a browser. Requires the project.write grant.',
+    input: {
+      projectId: z.string().describe('The project id, as `prj_...`.'),
+      name: z.string().min(1).max(200).optional(),
+      description: z.string().max(500).nullable().optional(),
+      websiteName: z.string().max(200).nullable().optional(),
+      websiteUrl: z.string().max(300).nullable().optional().describe('Display only. Not a CORS allowance.'),
+      allowedOrigins: z.array(z.string()).max(20).optional().describe('The complete list. [] removes the restriction.'),
+    },
+    run: (client, { projectId, ...body }) =>
+      client.request(`/v1/projects/${segment(projectId)}`, { method: 'PATCH', body }),
   }),
 
   defineTool({

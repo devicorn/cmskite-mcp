@@ -10,6 +10,11 @@ what the assistant needs; the defaults are read and write content. The token is
 shown once, and that dialogue generates the block below for whichever client you
 pick — **Set up a client** on the same screen shows it again afterwards.
 
+The first start downloads the package, which can take longer than a client
+waits for a server (often 30 seconds). If yours reports a timeout, run
+`npx -y cmskite-mcp@latest` once in a terminal to fill the cache, or
+`npm install -g cmskite-mcp` and use `cmskite-mcp` as the command.
+
 Every client runs the same process. They disagree only about where it is written
 and under what key, and a block copied from the wrong one pastes without
 complaint and then does nothing.
@@ -113,7 +118,8 @@ Settings (`cmd-shift-p` → “open settings”) — context servers, marked cus
 
 ## Tools
 
-**Where am I** — `whoami`, `list_projects`, `get_project`, `get_project_summary`
+**Where am I** — `whoami`, `list_projects`, `get_project`, `get_project_summary`,
+`update_project`
 
 **Shape** — `create_workspace`, `create_project`, `list_categories`,
 `create_category`, `update_category`, `delete_category`, `list_tags`,
@@ -125,9 +131,11 @@ Settings (`cmd-shift-p` → “open settings”) — context servers, marked cus
 **Keys** — `list_api_keys`, `create_api_key`
 
 **Connecting a website** — `get_integration_guide`, `check_integration`,
-`get_content_analytics`
+`get_content_analytics`, `get_post_analytics`
 
-Start with `whoami`, then `list_projects` for a `prj_…` id. Every content tool
+Start with `whoami`, then `list_projects` for a `prj_…` id. `whoami` returns
+`agentGrants`, the token's own list: a tool works only when that list and the
+owner's role both allow it. Every content tool
 needs one unless `CMSKITE_PROJECT_ID` is set.
 
 ### Connecting a website
@@ -149,7 +157,7 @@ Each tool needs the matching grant, and a token has only what was ticked:
 |---|---|
 | `whoami` | `member.read` — tick it, or the first call an assistant makes is the one that fails |
 | `list_projects`, `get_project`, `get_project_summary` | `project.read` |
-| `create_project` | `project.write` |
+| `create_project`, `update_project` (including allowed origins) | `project.write` |
 | `create_workspace` | `workspace.create` |
 | `list_*`, `get_post`, `search_posts` | `content.read` |
 | `create_*`, `update_*` | `content.write` |
@@ -158,7 +166,7 @@ Each tool needs the matching grant, and a token has only what was ticked:
 | `list_api_keys` | `apikey.read` |
 | `create_api_key` | `apikey.write` |
 | `check_integration` | `project.read` |
-| `get_content_analytics` | `analytics.read` |
+| `get_content_analytics`, `get_post_analytics` | `analytics.read` |
 | `get_integration_guide` | none — it reads nothing and changes nothing |
 
 New posts are drafts. Publishing is `update_post` with `status: "published"` —

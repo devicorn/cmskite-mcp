@@ -79,4 +79,25 @@ export const diagnosticTools = [
       return { summary, topPosts: top }
     },
   }),
+
+  defineTool({
+    name: 'get_post_analytics',
+    title: 'One post, day by day',
+    description:
+      'Views, unique readers and clicks for one post, per day. The way to check that a specific ' +
+      'post\'s view landed after wiring up tracking: open the post in a real browser (headless ' +
+      'browsers are not counted), wait about a minute for the rollup, then call this. A reader ' +
+      'counts once per post per day. Requires the analytics.read grant.',
+    input: {
+      projectId: z.string().describe('The project id, as `prj_...`.'),
+      postId: z.string().describe('The post id, as `post_...`. Not the slug.'),
+      from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().describe('Inclusive UTC day. Defaults to 30 days ago.'),
+      to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().describe('Inclusive UTC day. Defaults to today.'),
+    },
+    readOnly: true,
+    run: (client, args) =>
+      client.request(`/v1/analytics/content/posts/${segment(args.postId)}`, {
+        query: { projectId: args.projectId, from: args.from, to: args.to },
+      }),
+  }),
 ] as const

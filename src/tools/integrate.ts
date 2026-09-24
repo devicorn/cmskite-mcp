@@ -25,6 +25,7 @@ import { defineTool } from './register.js'
 const framework = z
   .enum([
     'nextjs-app',
+    'nextjs',
     'nextjs-pages',
     'react',
     'node',
@@ -37,7 +38,8 @@ const framework = z
   ])
   .describe(
     'What the project is. Look at the files rather than guessing. ' +
-      'JavaScript: `next` in package.json with an app/ directory is `nextjs-app`, `next` with ' +
+      'JavaScript: `next` in package.json with an app/ directory is `nextjs-app` (`nextjs` is ' +
+      'accepted as the same thing), `next` with ' +
       'pages/ is `nextjs-pages`, `react` without `next` is `react`, a package.json with no ' +
       'framework is `node`. ' +
       'Not JavaScript: .html files and no build step is `html`; wp-config.php or a wp-content/ ' +
@@ -97,6 +99,8 @@ function guide(args: GuideArgs): {
   notes: string[]
   verify: string
 } {
+  // The obvious first guess. The App Router is what `create-next-app` makes today.
+  if (args.framework === 'nextjs') args = { ...args, framework: 'nextjs-app' }
   const analytics = args.includeAnalytics !== false
   const raw = RAW.has(args.framework)
 
@@ -104,9 +108,11 @@ function guide(args: GuideArgs): {
     'Fetch the content on the server, report the view from the browser. That split IS the ' +
       'integration, and it is the part that gets missed: a site that only fetches content ' +
       'works perfectly and counts nobody.',
-    'A CMSKite key is read-only and returns published content only. There is no secret ' +
-      'credential here — but use two keys anyway, so the one in the page can be revoked ' +
-      'without taking the site down.',
+    'A website uses a PROJECT key, which starts `csk_live_`. It is read-only and returns ' +
+      'published content only, so it is safe in a page — use two anyway, so the one in the ' +
+      'page can be revoked without taking the site down. An AGENT token (`cka_live_`, the kind ' +
+      'this MCP server runs on) is not a website key: it can write and delete, and must never ' +
+      'be put in a browser bundle or reused as the site key, even though it can read content.',
     'A view is reported by the page that renders the post, never inferred from an API ' +
       'request. A build fetching every post is two hundred requests and no readers.',
     'The tracker needs the post’s `id` (`post_...`), not its slug. Render the id into the ' +
@@ -126,8 +132,27 @@ function guide(args: GuideArgs): {
     )
   }
 
+  if (args.framework.startsWith('nextjs') || args.framework === 'react') {
+    notes.push(
+      'Browser variables (NEXT_PUBLIC_*, VITE_*) are compiled into the bundle at BUILD time. ' +
+        'Setting one on the host changes nothing until the site is rebuilt and redeployed; until ' +
+        'then the tracker reads undefined and stays off. The tracker below is written so a ' +
+        'missing key switches it off instead of failing.',
+    )
+  }
+
+  notes.push(
+    'Views count once per reader, per post, per day, and only from a real browser: headless ' +
+      'browsers, curl and scripts are dropped silently (the endpoint still answers 202). To ' +
+      'verify, open a post in an ordinary browser and look for the POST to /v1/blog/events.',
+  )
+
   if (args.projectId) {
-    notes.push(`Create the keys for project ${args.projectId} with the create_api_key tool.`)
+    notes.push(
+      `Create the keys for project ${args.projectId} with the create_api_key tool. That needs ` +
+        'the apikey.write grant; if this token lacks it, the person creates the key in the ' +
+        'dashboard under Project → API keys and puts it in the site themselves.',
+    )
   }
 
   const keys = browserOnly(args.framework)
@@ -272,8 +297,13 @@ import { useTrackView } from 'cmskite/react'
  * and the tracker remembers the post for the tab besides. Nothing here can
  * throw, and nothing blocks the page.
  */
+// A project key (csk_live_...), never an agent token. NEXT_PUBLIC_ values are
+// baked in at build time: after setting it, redeploy.
+const KEY = process.env.NEXT_PUBLIC_CMSKITE_KEY
+
 export function TrackView({ postId }: { postId: string }) {
-  useTrackView(postId, { apiKey: process.env.NEXT_PUBLIC_CMSKITE_KEY! })
+  // Off until the key exists, and off in \`next dev\` so local reloads are not counted.
+  useTrackView(postId, { apiKey: KEY ?? '', enabled: Boolean(KEY) && process.env.NODE_ENV === 'production' })
   return null
 }
 `
@@ -346,7 +376,7 @@ ${analytics ? "import { useTrackView } from 'cmskite/react'\n" : ''}import type 
 import { cms } from '../../lib/cmskite'
 
 export default function BlogPost({ post }: { post: Post }) {
-${analytics ? "  useTrackView(post.id, { apiKey: process.env.NEXT_PUBLIC_CMSKITE_KEY! })\n\n" : ''}  return (
+${analytics ? "  // Off until NEXT_PUBLIC_CMSKITE_KEY exists (it is baked in at build time), and off in dev.\n  useTrackView(post.id, {\n    apiKey: process.env.NEXT_PUBLIC_CMSKITE_KEY ?? '',\n    enabled: Boolean(process.env.NEXT_PUBLIC_CMSKITE_KEY) && process.env.NODE_ENV === 'production',\n  })\n\n" : ''}  return (
     <article>
       <h1>{post.title}</h1>
       <div dangerouslySetInnerHTML={{ __html: post.body }} />
@@ -394,7 +424,7 @@ export function BlogPost({ slug }: { slug: string }) {
   const [post, setPost] = useState<Post | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-${analytics ? "  useTrackView(post?.id, { apiKey: import.meta.env.VITE_CMSKITE_KEY })\n\n" : ''}  useEffect(() => {
+${analytics ? "  // Off until VITE_CMSKITE_KEY exists (it is baked in at build time), and off in dev.\n  useTrackView(post?.id, {\n    apiKey: import.meta.env.VITE_CMSKITE_KEY ?? '',\n    enabled: Boolean(import.meta.env.VITE_CMSKITE_KEY) && import.meta.env.PROD,\n  })\n\n" : ''}  useEffect(() => {
     // Cancelled on unmount, and when a newer slug supersedes this one.
     const controller = new AbortController()
     cms.posts

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { createRequire } from 'node:module'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { CmsKiteClient } from './client.js'
@@ -15,12 +16,15 @@ import { allTools, registerTools } from './tools/index.js'
  * translator, not a second authorization layer, which is the only arrangement
  * where the two cannot disagree.
  */
+/** From package.json, so the handshake reports the version that is actually running. */
+const { version } = createRequire(import.meta.url)('../package.json') as { version: string }
+
 async function main(): Promise<void> {
   const config = readConfig()
   const client = new CmsKiteClient(config)
 
   const server = new McpServer(
-    { name: 'cmskite', version: '0.1.0' },
+    { name: 'cmskite', version },
     {
       instructions:
         'CMSKite manages blog content behind an API. A workspace holds projects; a project is ' +
@@ -39,7 +43,7 @@ async function main(): Promise<void> {
   // message corrupts the stream and the client drops the connection, so every
   // diagnostic in this process goes to stderr.
   await server.connect(new StdioServerTransport())
-  process.stderr.write(`cmskite-mcp ready: ${allTools.length} tools against ${config.apiUrl}\n`)
+  process.stderr.write(`cmskite-mcp ${version} ready: ${allTools.length} tools against ${config.apiUrl}\n`)
 }
 
 main().catch((err: unknown) => {
