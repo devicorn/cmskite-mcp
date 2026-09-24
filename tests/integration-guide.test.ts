@@ -146,3 +146,13 @@ describe('the diagnostic tools', () => {
     expect(analytics.description).toMatch(/check_integration/)
   })
 })
+
+describe('version check', () => {
+  it('compares plain versions numerically, not as strings', async () => {
+    const { isNewer } = await import('../src/version.js')
+    expect(isNewer('0.1.10', '0.1.9')).toBe(true)
+    expect(isNewer('0.1.4', '0.1.4')).toBe(false)
+    expect(isNewer('0.1.2', '0.1.4')).toBe(false)
+    expect(isNewer('1.0.0', '0.9.9')).toBe(true)
+  })
+})

@@ -1,3 +1,4 @@
+import { versionReport } from '../version.js'
 import { z } from 'zod'
 import { segment } from '../client.js'
 import { defineTool } from './register.js'
@@ -18,10 +19,15 @@ export const workspaceTools = [
       'The account this token acts as and the workspaces it can see. Call this first in a new ' +
       'conversation: it confirms the token works and names the workspace everything else happens in. ' +
       '`agentGrants` is what THIS TOKEN may do; `permissions` is what its owner may do. A tool ' +
-      'works only when both allow it, so read `agentGrants` to know which tools will succeed.',
+      'works only when both allow it, so read `agentGrants` to know which tools will succeed. ' +
+      '`mcp` says which version of this server is running and whether it is out of date; if ' +
+      '`mcp.outdated` is true, tell the person before reporting any bug, because it may already be fixed.',
     input: {},
     readOnly: true,
-    run: (client) => client.request('/v1/auth/me'),
+    run: async (client) => {
+      const [me, mcp] = await Promise.all([client.request<Record<string, unknown>>('/v1/auth/me'), versionReport()])
+      return { ...me, mcp }
+    },
   }),
 
   defineTool({

@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import { createRequire } from 'node:module'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { CmsKiteClient } from './client.js'
@@ -16,8 +15,7 @@ import { allTools, registerTools } from './tools/index.js'
  * translator, not a second authorization layer, which is the only arrangement
  * where the two cannot disagree.
  */
-/** From package.json, so the handshake reports the version that is actually running. */
-const { version } = createRequire(import.meta.url)('../package.json') as { version: string }
+import { VERSION as version, isNewer, latestVersion } from './version.js'
 
 async function main(): Promise<void> {
   const config = readConfig()
@@ -44,6 +42,11 @@ async function main(): Promise<void> {
   // diagnostic in this process goes to stderr.
   await server.connect(new StdioServerTransport())
   process.stderr.write(`cmskite-mcp ${version} ready: ${allTools.length} tools against ${config.apiUrl}\n`)
+  void latestVersion().then((newest) => {
+    if (newest && isNewer(newest, version)) {
+      process.stderr.write(`cmskite-mcp ${version} is out of date; ${newest} is available. Use cmskite-mcp@latest, or run: npx clear-npx-cache\n`)
+    }
+  })
 }
 
 main().catch((err: unknown) => {
