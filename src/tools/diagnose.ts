@@ -71,12 +71,13 @@ export const diagnosticTools = [
       // both. They are independent reads and nothing here mutates, so they go
       // together.
       const [summary, top] = await Promise.all([
-        client.request<unknown>('/v1/analytics/content/summary', { query }),
-        client.request<unknown>('/v1/analytics/content/top-posts', {
+        client.request<{ data: unknown }>('/v1/analytics/content/summary', { query }),
+        client.request<{ data: unknown; requestId?: string }>('/v1/analytics/content/top-posts', {
           query: { ...query, limit: args.topPosts ?? 10 },
         }),
       ])
-      return { summary, topPosts: top }
+      // One envelope, like every other tool, rather than two API responses side by side.
+      return { success: true, data: { ...(summary.data as object), topPosts: top.data }, requestId: top.requestId }
     },
   }),
 
