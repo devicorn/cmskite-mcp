@@ -1,0 +1,4 @@
+# Read by `smithery mcp publish`. Smithery ships a local (stdio) server as an
+# MCPB bundle, and builds its configuration form from manifest.json's user_config.
+name: cmskite-mcp
+target: local

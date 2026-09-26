@@ -1,0 +1,53 @@
+{
+  "manifest_version": "0.3",
+  "name": "cmskite-mcp",
+  "display_name": "CMSKite",
+  "version": "0.1.6",
+  "description": "Let an AI assistant manage CMSKite blog content: projects, posts, API keys and site integration.",
+  "author": {
+    "name": "CMSKite",
+    "url": "https://cmskite.com"
+  },
+  "homepage": "https://cmskite.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/devicorn/cmskite-mcp"
+  },
+  "support": "https://github.com/devicorn/cmskite-mcp/issues",
+  "license": "MIT",
+  "keywords": ["cms", "headless-cms", "blog", "content", "cmskite"],
+  "privacy_policies": ["https://cmskite.com/privacy"],
+  "server": {
+    "type": "node",
+    "entry_point": "dist/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/dist/index.js"],
+      "env": {
+        "CMSKITE_AGENT_TOKEN": "${user_config.agent_token}",
+        "CMSKITE_API_URL": "${user_config.api_url}"
+      }
+    }
+  },
+  "user_config": {
+    "agent_token": {
+      "type": "string",
+      "title": "Agent token",
+      "description": "From the CMSKite dashboard under Settings → Agent tokens. Starts cka_.",
+      "sensitive": true,
+      "required": true
+    },
+    "api_url": {
+      "type": "string",
+      "title": "API URL",
+      "description": "CMSKite API base URL.",
+      "default": "https://api.cmskite.com",
+      "required": false
+    }
+  },
+  "compatibility": {
+    "runtimes": {
+      "node": ">=22"
+    }
+  }
+}

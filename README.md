@@ -1,5 +1,10 @@
 # cmskite-mcp
 
+[CMSKite](https://cmskite.com) is a hosted blog backend: you write posts in a
+dashboard, and your website fetches them over HTTP. This MCP server lets an AI
+assistant do that work for you: create a project, write and publish posts, issue
+API keys, and generate the code that connects your site.
+
 An MCP server for CMSKite. It gives an assistant the workspace, project and
 content surface behind one agent token.
 

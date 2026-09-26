@@ -1,0 +1,35 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.devicorn/cmskite-mcp",
+  "title": "CMSKite",
+  "description": "Let an AI assistant manage CMSKite blog content: projects, posts, API keys and site integration.",
+  "websiteUrl": "https://cmskite.com",
+  "repository": {
+    "url": "https://github.com/devicorn/cmskite-mcp",
+    "source": "github"
+  },
+  "version": "0.1.6",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "cmskite-mcp",
+      "version": "0.1.6",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "CMSKITE_AGENT_TOKEN",
+          "description": "Agent token from the CMSKite dashboard (Settings → Agent tokens). Starts cka_.",
+          "isRequired": true,
+          "isSecret": true
+        },
+        {
+          "name": "CMSKITE_API_URL",
+          "description": "CMSKite API base URL.",
+          "default": "https://api.cmskite.com"
+        }
+      ]
+    }
+  ]
+}

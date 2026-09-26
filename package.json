@@ -1,6 +1,7 @@
 {
   "name": "cmskite-mcp",
-  "version": "0.1.5",
+  "version": "0.1.6",
+  "mcpName": "io.github.devicorn/cmskite-mcp",
   "description": "MCP server for CMSKite. Gives an assistant the workspace, project and content surface behind one agent token.",
   "license": "MIT",
   "author": "CMSKite",
