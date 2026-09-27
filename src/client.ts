@@ -38,7 +38,7 @@ export function segment(value: string): string {
   return encodeURIComponent(value)
 }
 
-export interface RequestOptions {
+interface RequestOptions {
   method?: string
   body?: unknown
   query?: Record<string, string | number | undefined | null>
