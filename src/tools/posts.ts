@@ -112,10 +112,18 @@ export const postTools = [
     description:
       'Changes only the fields you send; anything omitted is left alone. This is how a post is ' +
       'published: send status "published", which needs the content.publish grant on top of ' +
-      'content.write.',
+      'content.write. Pass expectedRevision (the `revision` from get_post) so that an edit made ' +
+      'against an old copy is refused with REVISION_CONFLICT instead of overwriting a newer save; ' +
+      'on that error, read the post again and reapply the change.',
     input: {
       ...projectArg,
       id: z.string().describe('The post id, as `post_...`.'),
+      expectedRevision: z
+        .number()
+        .int()
+        .min(1)
+        .optional()
+        .describe('The `revision` of the copy this edit is based on. Recommended.'),
       title: z.string().min(1).max(300).optional(),
       body: z.string().max(1_000_000).optional(),
       bodyFormat: z.enum(['markdown', 'html', 'plain']).optional(),

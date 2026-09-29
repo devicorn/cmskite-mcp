@@ -44,7 +44,12 @@ interface RequestOptions {
   query?: Record<string, string | number | undefined | null>
   /** Sent as `X-Project-Id`. An agent token is not scoped to one project. */
   projectId?: string | null
+  /** Total time for the call. Default 30 s: a tool call must not hang the model's turn. */
+  timeoutMs?: number
 }
+
+const TIMEOUT_MS = 30_000
+const MUTATING = new Set(['POST', 'PUT', 'PATCH'])
 
 export class CmsKiteClient {
   constructor(private readonly config: Config) {}
@@ -76,14 +81,30 @@ export class CmsKiteClient {
       headers['x-project-id'] = projectId
     }
     if (options.body !== undefined) headers['content-type'] = 'application/json'
+    const method = options.method ?? 'GET'
+    // One key per tool call: if the connection drops after the API acted, the
+    // API can tell a repeat of this call from a new one (audit F17).
+    if (MUTATING.has(method)) headers['idempotency-key'] = crypto.randomUUID()
 
-    const response = await fetch(url, {
-      method: options.method ?? 'GET',
-      headers,
-      body: options.body === undefined ? undefined : JSON.stringify(options.body),
-    })
-
-    const text = await response.text()
+    let response: Response
+    let text: string
+    try {
+      response = await fetch(url, {
+        method,
+        headers,
+        body: options.body === undefined ? undefined : JSON.stringify(options.body),
+        signal: AbortSignal.timeout(options.timeoutMs ?? TIMEOUT_MS),
+      })
+      text = await response.text()
+    } catch (err) {
+      if ((err as Error).name === 'TimeoutError') {
+        // For a write, "no answer" is not "did not happen": say so rather than inviting a blind retry.
+        throw new ApiError(0, 'TIMEOUT', MUTATING.has(method)
+          ? `No answer from ${path} in time. It may or may not have taken effect; check before retrying.`
+          : `No answer from ${path} in time.`, null, null)
+      }
+      throw err
+    }
     const payload = text ? safeParse(text) : null
 
     if (!response.ok) {
