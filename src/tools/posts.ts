@@ -12,6 +12,13 @@ const seo = z
     ogImage: z.string().max(2000).optional(),
     noIndex: z.boolean().optional(),
     keywords: z.array(z.string().max(60)).max(20).optional(),
+    focusKeyword: z
+      .string()
+      .max(100)
+      .optional()
+      .describe(
+        'The phrase this post should rank for. The SEO score checks it in the title, description, first paragraph, slug and a subheading.',
+      ),
   })
   .describe('Search-engine fields. Omit any the person did not ask for.')
 
@@ -28,7 +35,8 @@ export const postTools = [
     title: 'List posts',
     description:
       'Posts in a project, newest published first. Paginate with `cursor` from the previous ' +
-      'response — there is no page number, by design. Filter before paginating.',
+      'response — there is no page number, by design. Filter before paginating. ' +
+      'Each item carries seoScore (0-100, or null when unscored).',
     input: {
       ...projectArg,
       status: STATUS.optional(),
@@ -47,7 +55,10 @@ export const postTools = [
   defineTool({
     name: 'get_post',
     title: 'Get a post',
-    description: 'One post with its full body, by id or by slug.',
+    description:
+      'One post with its full body, by id or by slug. It carries seoScore (0-100) and ' +
+      'seoAudit.checks: fix "fail" and "warn" checks to raise the score. Free plans show the ' +
+      'three most important issues and hiddenIssues.',
     input: {
       ...projectArg,
       id: z.string().optional().describe('The post id, as `post_...`.'),
