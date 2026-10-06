@@ -51,7 +51,7 @@ describe('post tools and locale', () => {
   })
 
   it('update_post without locale, or in the original locale, still PATCHes', async () => {
-    const fetch = fake({ 'GET /v1/blog/posts/pst_1': { locale: 'en' }, 'PATCH /v1/blog/posts/pst_1': {} })
+    const fetch = fake({ 'GET /v1/blog/posts/pst_1': { locale: 'en', versions: [{ locale: 'en', original: true }, { locale: 'hi' }] }, 'PATCH /v1/blog/posts/pst_1': {} })
     await call('update_post', { id: 'pst_1', title: 'a' })
     await call('update_post', { id: 'pst_1', title: 'a', locale: 'en', categoryId: 'c' })
     expect(fetch).toHaveBeenCalledTimes(3)
@@ -62,7 +62,7 @@ describe('post tools and locale', () => {
 
   it('update_post in another locale PUTs the translation, filling title/body from it', async () => {
     const fetch = fake({
-      'GET /v1/blog/posts/pst_1': { locale: 'en' },
+      'GET /v1/blog/posts/pst_1': { locale: 'en', versions: [{ locale: 'en', original: true }, { locale: 'hi' }] },
       'GET /v1/blog/posts/pst_1/translations/hi': { title: 'T', body: 'B' },
       'PUT /v1/blog/posts/pst_1/translations/hi': {},
     })
@@ -72,13 +72,46 @@ describe('post tools and locale', () => {
     expect(put.body.locale).toBeUndefined()
   })
 
+  it('update_post merges the whole stored translation under the caller fields', async () => {
+    const fetch = fake({
+      'GET /v1/blog/posts/pst_1': { locale: 'hi', versions: [{ locale: 'en', original: true }, { locale: 'hi' }] },
+      'GET /v1/blog/posts/pst_1/translations/hi': {
+        title: 'T', body: 'B', excerpt: 'E', seo: { title: 's' }, bodyFormat: 'html', slug: 'sl', status: 'draft', revision: 7, publishedAt: 'x',
+      },
+      'PUT /v1/blog/posts/pst_1/translations/hi': {},
+    })
+    await call('update_post', { id: 'pst_1', locale: 'hi', title: 'x' })
+    expect(sent(fetch, 2).body).toEqual({
+      title: 'x', body: 'B', excerpt: 'E', seo: { title: 's' }, bodyFormat: 'html', slug: 'sl', status: 'draft', expectedRevision: 7,
+    })
+  })
+
+  it('update_post uses versions, not the served locale, to find the original', async () => {
+    const fetch = fake({
+      'GET /v1/blog/posts/pst_1': { locale: 'hi', versions: [{ locale: 'en', original: true }, { locale: 'hi' }] },
+      'GET /v1/blog/posts/pst_1/translations/hi': { title: 'T', body: 'B' },
+      'PUT /v1/blog/posts/pst_1/translations/hi': {},
+      'PATCH /v1/blog/posts/pst_1': {},
+    })
+    await call('update_post', { id: 'pst_1', locale: 'hi', title: 'x' })
+    expect(sent(fetch, 2).method).toBe('PUT')
+    await call('update_post', { id: 'pst_1', locale: 'en', title: 'x' })
+    expect(sent(fetch, 4).method).toBe('PATCH')
+  })
+
+  it('update_post refuses to guess when versions is missing', async () => {
+    const fetch = fake({ 'GET /v1/blog/posts/pst_1': { locale: 'hi' } })
+    await expect(call('update_post', { id: 'pst_1', locale: 'hi', title: 'x' })).rejects.toThrow(/original language/)
+    expect(fetch).toHaveBeenCalledTimes(1)
+  })
+
   it('update_post for a new translation needs title and body', async () => {
-    fake({ 'GET /v1/blog/posts/pst_1': { locale: 'en' }, 'GET /v1/blog/posts/pst_1/translations/hi': 404 })
+    fake({ 'GET /v1/blog/posts/pst_1': { locale: 'en', versions: [{ locale: 'en', original: true }, { locale: 'hi' }] }, 'GET /v1/blog/posts/pst_1/translations/hi': 404 })
     await expect(call('update_post', { id: 'pst_1', locale: 'hi', title: 'T' })).rejects.toThrow(/title and body/)
   })
 
   it('update_post refuses shared fields on a translation', async () => {
-    const fetch = fake({ 'GET /v1/blog/posts/pst_1': { locale: 'en' } })
+    const fetch = fake({ 'GET /v1/blog/posts/pst_1': { locale: 'en', versions: [{ locale: 'en', original: true }, { locale: 'hi' }] } })
     await expect(call('update_post', { id: 'pst_1', locale: 'hi', title: 'T', tags: ['a'] })).rejects.toThrow(/without `locale`/)
     expect(fetch).toHaveBeenCalledTimes(1)
   })

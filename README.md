@@ -131,7 +131,11 @@ Settings (`cmd-shift-p` → “open settings”) — context servers, marked cus
 `create_tag`, `list_authors`, `create_author`
 
 **Content** — `list_posts`, `get_post`, `search_posts`, `create_post`,
-`update_post`, `delete_post`
+`update_post`, `delete_post`, `delete_post_translation`. The read tools, `create_post`
+and `update_post` take an optional `locale` (a language the project has turned on, e.g. `hi`;
+leave it out for the project's default). `update_post` with a `locale` other than the post's
+original edits that language version; shared fields (category, tags, author, cover) cannot be
+combined with it.
 
 **Keys** — `list_api_keys`, `create_api_key`
 

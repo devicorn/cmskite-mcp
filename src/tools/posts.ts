@@ -138,7 +138,9 @@ export const postTools = [
       'published: send status "published", which needs the content.publish grant on top of ' +
       'content.write. Pass expectedRevision (the `revision` from get_post) so that an edit made ' +
       'against an old copy is refused with REVISION_CONFLICT instead of overwriting a newer save; ' +
-      'on that error, read the post again and reapply the change.',
+      'on that error, read the post again and reapply the change. A `locale` other than the ' +
+      "post's original language edits that language version (created if new, then title and body " +
+      'are required); shared fields (category, tags, author, cover) cannot be combined with `locale`.',
     input: {
       ...projectArg,
       id: z.string().describe('The post id, as `post_...`.'),
@@ -166,8 +168,15 @@ export const postTools = [
       const path = `/v1/blog/posts/${segment(id)}`
       const patch = () => client.request(path, { method: 'PATCH', projectId, body })
       if (!locale) return patch()
-      const post = unwrap<{ locale?: string }>(await client.request(path, { projectId }))
-      if (!post.locale || post.locale === locale) return patch()
+      const post = unwrap<{ versions?: { locale: string; original?: boolean }[] }>(
+        await client.request(path, { projectId }),
+      )
+      // `locale` on the post is the served version, not the original: only `versions` says which is the original.
+      const original = post.versions?.find((v) => v.original)?.locale
+      if (!original) {
+        throw new Error('Cannot tell the post\'s original language (no `versions` in the response); not updating.')
+      }
+      if (original === locale) return patch()
 
       // Another language: the translations endpoint is strict and owns only the text fields.
       const { categoryId, tags, authorId, ...own } = body
@@ -178,20 +187,26 @@ export const postTools = [
         )
       }
       const tPath = `${path}/translations/${segment(locale)}`
-      const put = { ...own } as Record<string, unknown>
-      if (!put.title || put.body === undefined) {
-        let current: { title?: string; body?: string } | null = null
-        try {
-          current = unwrap(await client.request(tPath, { projectId }))
-        } catch (err) {
-          if (!(err instanceof ApiError && err.status === 404)) throw err
-        }
-        if (!current) {
-          throw new Error(`There is no ${locale} version yet: send both title and body to create it.`)
-        }
-        put.title ||= current.title
-        put.body ??= current.body
+      let current: Record<string, unknown> | null = null
+      try {
+        current = unwrap(await client.request(tPath, { projectId }))
+      } catch (err) {
+        if (!(err instanceof ApiError && err.status === 404)) throw err
       }
+      if (!current && (!own.title || own.body === undefined)) {
+        throw new Error(`There is no ${locale} version yet: send both title and body to create it.`)
+      }
+      // PUT replaces the whole version, so start from what is stored and lay the caller's fields on top.
+      const merged: Record<string, unknown> = {}
+      if (current) {
+        for (const k of ['title', 'body', 'excerpt', 'seo', 'bodyFormat', 'slug', 'status']) merged[k] = current[k]
+        if (current.status === 'published') merged.publishedAt = current.publishedAt
+        if (current.status === 'scheduled') merged.scheduledAt = current.scheduledAt
+        merged.expectedRevision = current.revision
+      }
+      const put = Object.fromEntries(
+        Object.entries({ ...merged, ...own }).filter(([, v]) => v !== undefined && v !== null),
+      )
       return client.request(tPath, { method: 'PUT', projectId, body: put })
     },
   }),
