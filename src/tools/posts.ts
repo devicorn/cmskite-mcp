@@ -10,6 +10,14 @@ const locale = z
   .optional()
   .describe("locale: a language the project has turned on, e.g. `hi`; leave it out for the project's default")
 
+/** An object without its null, undefined and empty-string entries, nested objects included. */
+const withoutEmpty = (o: Record<string, unknown>): Record<string, unknown> =>
+  Object.fromEntries(
+    Object.entries(o)
+      .filter(([, v]) => v !== null && v !== undefined && v !== '')
+      .map(([k, v]) => [k, v && typeof v === 'object' && !Array.isArray(v) ? withoutEmpty(v as Record<string, unknown>) : v]),
+  )
+
 // The API wraps successes as { data }; unwrap defensively.
 const unwrap = <T>(res: unknown) => ((res as { data?: T } | null)?.data ?? res) as T
 
@@ -140,7 +148,9 @@ export const postTools = [
       'against an old copy is refused with REVISION_CONFLICT instead of overwriting a newer save; ' +
       'on that error, read the post again and reapply the change. A `locale` other than the ' +
       "post's original language edits that language version (created if new, then title and body " +
-      'are required); shared fields (category, tags, author, cover) cannot be combined with `locale`.',
+      'are required); shared fields (category, tags, author, cover) cannot be combined with `locale`. ' +
+      "Without `locale` the original is edited, and a post whose default version is not its original " +
+      'is refused until you pass `locale`.',
     input: {
       ...projectArg,
       id: z.string().describe('The post id, as `post_...`.'),
@@ -167,12 +177,21 @@ export const postTools = [
     run: async (client, { projectId, id, locale, ...body }) => {
       const path = `/v1/blog/posts/${segment(id)}`
       const patch = () => client.request(path, { method: 'PATCH', projectId, body })
-      if (!locale) return patch()
-      const post = unwrap<{ versions?: { locale: string; original?: boolean }[] }>(
+      const post = unwrap<{ locale?: string; versions?: { locale: string; original?: boolean }[] }>(
         await client.request(path, { projectId }),
       )
       // `locale` on the post is the served version, not the original: only `versions` says which is the original.
       const original = post.versions?.find((v) => v.original)?.locale
+      if (!locale) {
+        // A PATCH writes the original; the agent was looking at another version's text.
+        if (original && post.locale && original !== post.locale) {
+          throw new Error(
+            `This post was written in ${original}, but its ${post.locale} version is the one served by default. ` +
+              `To choose, pass \`locale\`: "${original}" to edit the original, or "${post.locale}" to edit that version.`,
+          )
+        }
+        return patch()
+      }
       if (!original) {
         throw new Error('Cannot tell the post\'s original language (no `versions` in the response); not updating.')
       }
@@ -204,9 +223,10 @@ export const postTools = [
         if (current.status === 'scheduled') merged.scheduledAt = current.scheduledAt
         merged.expectedRevision = current.revision
       }
-      const put = Object.fromEntries(
-        Object.entries({ ...merged, ...own }).filter(([, v]) => v !== undefined && v !== null),
-      )
+      // What the API sends back has every key, nulls included (`seo.title: null`), and PUT
+      // refuses a null where it wants a string: stored nulls are left out at every depth.
+      // The caller's own null (excerpt: null) is kept, which is how a field is cleared.
+      const put = { ...withoutEmpty(merged), ...Object.fromEntries(Object.entries(own).filter(([, v]) => v !== undefined)) }
       return client.request(tPath, { method: 'PUT', projectId, body: put })
     },
   }),

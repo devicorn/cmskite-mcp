@@ -54,10 +54,31 @@ describe('post tools and locale', () => {
     const fetch = fake({ 'GET /v1/blog/posts/pst_1': { locale: 'en', versions: [{ locale: 'en', original: true }, { locale: 'hi' }] }, 'PATCH /v1/blog/posts/pst_1': {} })
     await call('update_post', { id: 'pst_1', title: 'a' })
     await call('update_post', { id: 'pst_1', title: 'a', locale: 'en', categoryId: 'c' })
-    expect(fetch).toHaveBeenCalledTimes(3)
-    expect(sent(fetch, 0).method).toBe('PATCH')
-    expect(sent(fetch, 2)).toMatchObject({ method: 'PATCH', body: { title: 'a', categoryId: 'c' } })
-    expect(sent(fetch, 2).body.locale).toBeUndefined()
+    expect(fetch).toHaveBeenCalledTimes(4)
+    expect(sent(fetch, 1).method).toBe('PATCH')
+    expect(sent(fetch, 3)).toMatchObject({ method: 'PATCH', body: { title: 'a', categoryId: 'c' } })
+    expect(sent(fetch, 3).body.locale).toBeUndefined()
+  })
+
+  it('update_post without locale refuses when the version served is not the original', async () => {
+    const fetch = fake({ 'GET /v1/blog/posts/pst_1': { locale: 'hi', versions: [{ locale: 'fr', original: true }, { locale: 'hi' }] } })
+    await expect(call('update_post', { id: 'pst_1', title: 'a' })).rejects.toThrow(/pass `locale`: "fr".*"hi"/)
+    expect(fetch).toHaveBeenCalledTimes(1)
+  })
+
+  it('update_post merges a stored translation as the API returns it, nulls and all', async () => {
+    const fetch = fake({
+      'GET /v1/blog/posts/pst_1': { locale: 'en', versions: [{ locale: 'en', original: true }, { locale: 'hi' }] },
+      'GET /v1/blog/posts/pst_1/translations/hi': {
+        title: 'T', body: 'B', excerpt: 'E', bodyFormat: 'markdown', slug: 'sl', status: 'draft', revision: 2, publishedAt: null, scheduledAt: null,
+        seo: { title: null, description: 'd', canonicalUrl: null, ogImage: null, noIndex: false, keywords: [], focusKeyword: null },
+      },
+      'PUT /v1/blog/posts/pst_1/translations/hi': {},
+    })
+    await call('update_post', { id: 'pst_1', locale: 'hi', title: 'x', excerpt: null })
+    expect(sent(fetch, 2).body).toEqual({
+      title: 'x', body: 'B', excerpt: null, seo: { description: 'd', noIndex: false, keywords: [] }, bodyFormat: 'markdown', slug: 'sl', status: 'draft', expectedRevision: 2,
+    })
   })
 
   it('update_post in another locale PUTs the translation, filling title/body from it', async () => {
