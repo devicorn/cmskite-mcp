@@ -2,7 +2,7 @@
   "manifest_version": "0.3",
   "name": "cmskite-mcp",
   "display_name": "CMSKite",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Let an AI assistant manage CMSKite blog content: projects, posts, API keys and site integration.",
   "author": {
     "name": "CMSKite",
